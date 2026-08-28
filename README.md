@@ -193,7 +193,6 @@ During development, the Arduino can be powered through USB from a computer. Afte
 
 For a portable demonstration, the easiest approach is a **5V USB power bank connected directly to the Arduino Uno USB port**. This allows the existing circuit to remain unchanged.
 
-A 7.4V (2S) LiPo is also being evaluated as an alternative portable power source. A 2S LiPo must **never be connected directly to the Arduino 5V pin or USB power line**. The battery connector, polarity, and power arrangement must be verified before using it.
 
 ## Prototype Goal
 
