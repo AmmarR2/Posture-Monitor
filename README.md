@@ -55,16 +55,6 @@ The current calibrated threshold is approximately **-115°**. This value depends
 
 # Wiring Diagram
 <img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/de30b2d2-35e1-4049-ad0a-110490066a67" />
----
-
-
----
-
-# Posture Statistics Preview
-
-
-
-
 
 ---
 
