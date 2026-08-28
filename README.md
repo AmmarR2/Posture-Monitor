@@ -1,90 +1,254 @@
 # Posture Monitor
 
-A wearable/desk posture-monitor prototype built around an Arduino Uno and MPU-6050 motion sensor.
+A wearable posture-monitor prototype built with an **Arduino Uno**, **MPU-6050 motion sensor**, and **vibration motor**. The device measures upper-body tilt and gives physical feedback when the user remains in a slouched position.
 
-## Goal
+## Current Status
 
-Detect when the user starts slouching and provide a simple reminder using vibration and/or an LED.
+**Working prototype.**
 
-The first version is intentionally simple so the sensing logic, calibration, electronics, and feedback system can be tested before making the device smaller or wearable.
+The current version can:
+
+- Read posture angle from the MPU-6050
+- Classify posture as upright or slouching
+- Wait 3 seconds before issuing an alert
+- Activate a vibration motor while slouching
+- Stop the motor immediately when posture returns upright
+- Run independently after the program has been uploaded to the Arduino
+
+The current measured threshold is approximately **-115°**:
+
+- Angle greater than or equal to -115° → upright
+- Angle below -115° → slouching
+
+This threshold depends on how the sensor is mounted and can be adjusted in firmware.
 
 ## How It Works
 
 ```text
-[MPU-6050 motion sensor]
+       MPU-6050
+    posture sensor
           |
-          | orientation / tilt data
+          | I2C
           v
-      [Arduino Uno]
+     Arduino Uno
           |
-          +--> posture calculation
-          +--> slouch threshold
+          | calculates angle
+          | checks -115° threshold
+          | waits 3 seconds
+          v
+       D9 signal
+          |
+       1k resistor
+          |
+     S8050 transistor
           |
           v
- [LED / vibration motor]
+   Vibration motor
 ```
 
-The MPU-6050 contains an accelerometer and gyroscope. The Arduino reads the sensor, estimates the user's orientation, compares it with a calibrated "good posture" position, and triggers feedback if poor posture continues long enough.
+The MPU-6050 sends acceleration measurements to the Arduino over I2C. The Arduino calculates a tilt angle using the X and Z acceleration axes. If the angle remains below the slouch threshold for at least three seconds, Digital Pin 9 activates the transistor controlling the vibration motor.
 
-## Prototype Hardware
+Returning to an upright position immediately turns the motor off and resets the timer.
 
-Planned prototype components:
+## Hardware
 
 - Arduino Uno R3
-- GY-521 MPU-6050 accelerometer/gyroscope module
+- GY-521 / MPU-6050 accelerometer and gyroscope module
 - Breadboard
 - Jumper wires
-- LED
-- Current-limiting resistor
 - Small vibration motor
-- NPN transistor for driving the motor
-- Flyback diode for the motor
-- External battery/power solution later in development
+- S8050 NPN transistor
+- 1kΩ resistor
+- 1N4007 flyback diode
+- USB power source / portable power solution
 
-## Repository Structure
+### Planned cleanup
+
+The working full-size breadboard prototype can later be transferred to a **400-point half-size breadboard** with shorter jumper wires to make the assembly smaller and cleaner.
+
+## Wiring
+
+### MPU-6050
+
+| MPU-6050 | Arduino Uno |
+|---|---|
+| VCC | 5V power rail |
+| GND | GND rail |
+| SDA | A4 |
+| SCL | A5 |
+
+### Breadboard power
+
+| Arduino | Breadboard |
+|---|---|
+| 5V | Positive (+) rail |
+| GND | Negative (-) rail |
+
+### Vibration motor driver
+
+The S8050 transistor is used so the Arduino GPIO does **not** directly power the motor.
 
 ```text
-Posture-Monitor/
-├── firmware/            # Arduino firmware
-├── docs/                # Wiring, parts, design notes, experiments
-├── README.md
-└── .gitignore
+Power + ---- Motor ---- S8050 Collector
+                         |
+Arduino D9 -- 1kΩ -- Base
+                         |
+GND ----------------- Emitter
 ```
 
-## Development Milestones
+A **1N4007 diode** is connected across the motor as a flyback diode to protect the electronics from the voltage spike produced when the motor switches off.
 
-- [ ] Read raw MPU-6050 accelerometer data
-- [ ] Read gyroscope data
-- [ ] Calculate useful tilt/orientation values
-- [ ] Create a calibration routine for good posture
-- [ ] Define a slouch threshold
-- [ ] Require poor posture for a short time before alerting
-- [ ] Trigger an LED warning
-- [ ] Drive a vibration motor through a transistor
-- [ ] Tune sensitivity and reduce false alerts
-- [ ] Move from breadboard prototype to compact hardware
-- [ ] Design a wearable or desk-mounted enclosure
+Current breadboard implementation:
 
-## Current Phase
+- S8050 emitter → GND
+- S8050 base → 1kΩ resistor → Arduino D9
+- S8050 collector → motor negative
+- Motor positive → positive power rail
+- 1N4007 striped end → positive motor/power side
+- 1N4007 non-striped end → motor negative / transistor collector side
 
-**Phase 1: Sensor prototype**
+> S8050 pinouts can vary by manufacturer. Verify the transistor's datasheet before rebuilding the circuit.
 
-The first goal is simply to connect the MPU-6050 to the Arduino and print stable motion/orientation readings to the Serial Monitor.
+## Firmware
 
-## Engineering Challenges
+```cpp
+#include <Wire.h>
+#include <math.h>
 
-This project explores:
+const int MPU = 0x68;
+const int motorPin = 9;
 
+unsigned long slouchStart = 0;
+bool timingSlouch = false;
+
+void setup() {
+  Wire.begin();
+  Serial.begin(9600);
+
+  pinMode(motorPin, OUTPUT);
+  digitalWrite(motorPin, LOW);
+
+  // Wake MPU-6050
+  Wire.beginTransmission(MPU);
+  Wire.write(0x6B);
+  Wire.write(0);
+  Wire.endTransmission(true);
+}
+
+void loop() {
+  Wire.beginTransmission(MPU);
+  Wire.write(0x3B);
+  Wire.endTransmission(false);
+  Wire.requestFrom(MPU, 6, true);
+
+  int16_t ax = Wire.read() << 8 | Wire.read();
+  int16_t ay = Wire.read() << 8 | Wire.read();
+  int16_t az = Wire.read() << 8 | Wire.read();
+
+  float angle = atan2(ax, az) * 180.0 / PI;
+
+  Serial.print("Angle: ");
+  Serial.print(angle);
+  Serial.print(" | ");
+
+  if (angle < -115) {
+    Serial.print("SLOUCHING");
+
+    if (!timingSlouch) {
+      slouchStart = millis();
+      timingSlouch = true;
+    }
+
+    if (millis() - slouchStart >= 3000) {
+      digitalWrite(motorPin, HIGH);
+      Serial.print(" - VIBRATING");
+    }
+  } else {
+    Serial.print("UPRIGHT");
+    timingSlouch = false;
+    digitalWrite(motorPin, LOW);
+  }
+
+  Serial.println();
+  delay(100);
+}
+```
+
+## Detection Logic
+
+Example readings from the current sensor position:
+
+```text
+-100°  -> UPRIGHT
+-110°  -> UPRIGHT
+-120°  -> SLOUCHING
+-130°  -> SLOUCHING
+```
+
+The **-115° threshold is not universal**. Moving or rotating the MPU-6050 changes the readings, so the threshold should be measured again whenever the sensor mounting position changes.
+
+## Power
+
+During development, the Arduino can be powered through USB from a computer. After firmware is uploaded, the Arduino stores the program and does not require a computer to run.
+
+For a portable demonstration, the easiest approach is a **5V USB power bank connected directly to the Arduino Uno USB port**. This allows the existing circuit to remain unchanged.
+
+A 7.4V (2S) LiPo is also being evaluated as an alternative portable power source. A 2S LiPo must **never be connected directly to the Arduino 5V pin or USB power line**. The battery connector, polarity, and power arrangement must be verified before using it.
+
+## Prototype Goal
+
+The immediate goal is a portable proof-of-concept that can be worn on the chest for a demonstration:
+
+```text
+     Chest / lanyard
+           |
+      MPU-6050
+           |
+      Arduino Uno
+           |
+   vibration feedback
+           |
+   portable battery
+```
+
+The first wearable version prioritizes demonstrating that the sensing and feedback system works rather than minimizing device size.
+
+## Development Progress
+
+- [x] Connect MPU-6050 to Arduino
+- [x] Read accelerometer data
+- [x] Calculate posture angle
+- [x] Determine upright/slouch measurements
+- [x] Implement adjustable slouch threshold
+- [x] Require continuous slouching before alert
+- [x] Build transistor motor driver
+- [x] Add flyback diode
+- [x] Activate vibration motor from firmware
+- [x] Stop vibration when posture is corrected
+- [x] Working integrated prototype
+- [ ] Add portable battery power
+- [ ] Transfer circuit to smaller breadboard
+- [ ] Shorten and organize wiring
+- [ ] Mount sensor consistently against chest
+- [ ] Build lanyard/enclosure
+- [ ] Test complete portable demonstration
+
+## Engineering Concepts
+
+This project demonstrates:
+
+- Embedded systems programming
 - I2C communication
-- Accelerometers and gyroscopes
-- Sensor calibration
-- Signal filtering
+- Accelerometer-based orientation sensing
+- Real-time sensor processing
 - Threshold-based detection
-- Transistor switching
-- Feedback system design
-- Human-centered testing
-- Embedded firmware development
+- Non-blocking timing with `millis()`
+- NPN transistor switching
+- Inductive-load flyback protection
+- Prototype power distribution
+- Wearable electronics design
+- Iterative calibration and testing
 
-## Status
+## Future Improvements
 
-Early prototype / active development.
+Once the Arduino prototype is demonstrated successfully, possible improvements include a smaller microcontroller, rechargeable integrated battery, custom PCB/perfboard, automatic posture calibration, improved filtering, data logging, Bluetooth connectivity, and a purpose-built wearable enclosure.
