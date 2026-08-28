@@ -55,7 +55,7 @@ The current calibrated threshold is approximately **-115°**. This value depends
 
 # Wiring Diagram
 
-<!-- Add the completed breadboard wiring diagram here -->
+<!-- Add the completed breadboard wiring diagram image here -->
 
 
 
@@ -77,39 +77,6 @@ The current calibrated threshold is approximately **-115°**. This value depends
 
 ---
 
-# Wiring Connections
-
-## MPU-6050
-
-| MPU-6050 | Arduino Uno |
-|---|---|
-| VCC | 5V power rail |
-| GND | GND rail |
-| SDA | A4 |
-| SCL | A5 |
-
-## Breadboard Power
-
-| Arduino | Breadboard |
-|---|---|
-| 5V | Positive (+) rail |
-| GND | Negative (-) rail |
-
-## Vibration Motor Driver
-
-| Component | Connection |
-|---|---|
-| Arduino D9 | 1kΩ resistor → S8050 Base |
-| S8050 Collector | Vibration motor negative |
-| S8050 Emitter | GND |
-| Vibration motor positive | 5V positive rail |
-| 1N4007 striped end | Motor positive / 5V side |
-| 1N4007 non-striped end | Motor negative / transistor collector side |
-
-> S8050 pinouts can vary by manufacturer. Verify the transistor's datasheet before rebuilding the circuit.
-
----
-
 # Software Used
 
 - Arduino IDE
@@ -124,7 +91,7 @@ The current calibrated threshold is approximately **-115°**. This value depends
 
 ## 1. Build the Circuit
 
-Connect the MPU-6050, vibration motor, transistor, resistor, and flyback diode according to the wiring diagram above.
+Build the circuit using the wiring diagram image above.
 
 ## 2. Connect the Arduino
 
