@@ -54,24 +54,15 @@ The current calibrated threshold is approximately **-115°**. This value depends
 ---
 
 # Wiring Diagram
-
-<!-- Add the completed breadboard wiring diagram image here -->
-
-
-
+<img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/de30b2d2-35e1-4049-ad0a-110490066a67" />
 ---
-
-# Prototype / Device Preview
-
-<!-- Add a photo of the completed posture monitor here -->
-
 
 
 ---
 
 # Posture Statistics Preview
 
-<!-- Add a Serial Monitor screenshot or statistics image here -->
+
 
 
 
