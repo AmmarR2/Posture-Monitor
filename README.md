@@ -58,11 +58,9 @@ The current calibrated threshold is approximately **-115°**. This value depends
 
 ---
 
-# Posture Statistics Preview
+# Posture Device Prototype Preview
 
-<!-- Add the posture statistics / Serial Monitor image here -->
-
-
+<img width="3210" height="2182" alt="image" src="https://github.com/user-attachments/assets/7d3773d1-6b60-4c72-af6a-2b0a7f869efe" />
 
 ---
 
