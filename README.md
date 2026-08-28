@@ -58,6 +58,14 @@ The current calibrated threshold is approximately **-115°**. This value depends
 
 ---
 
+# Posture Statistics Preview
+
+<!-- Add the posture statistics / Serial Monitor image here -->
+
+
+
+---
+
 # Software Used
 
 - Arduino IDE
